@@ -1,28 +1,6 @@
 import re
+from pprint import pprint
 import subprocess
-
-
-class Job:
-    CRONRE = re.compile(r'^\s*([^@#\s]+)\s+([^@#\s]+)\s+([^@#\s]+)\s+([^@#\s]+)'
-                        r'\s+([^@#\s]+)\s+([^\n]*?)(\s+#\s*([^\n]*)|$)')
-
-    def __init__(self, cron_str: str):
-        self.str = cron_str
-        self._minute = self._hour = self._day = self._month = self._weekday = self.what = None
-        self.read_cronjob(self.str)
-
-    @property
-    def when(self):
-        return f'{self._minute} {self._hour} {self._day} {self._month} {self._weekday}'
-
-    def read_cronjob(self, cron_str: str):
-        items = self.CRONRE.findall(cron_str)
-        self._minute, self._hour, self._day, self._month, self._weekday = items[0][:5]
-        self.what = ' ' .join(i for i in items[0][5:] if i)
-        return self
-
-    def __repr__(self):
-        return f'{self.when} | {self.what}'
 
 
 class Cron:
@@ -31,6 +9,8 @@ class Cron:
         self._crontab = subprocess.check_output(['crontab', '-l']).decode('utf-8')
         self.crons = {}
         self.read_crontab()
+        pprint(self._crontab)
+        pprint(self.crons)
 
     def read_crontab(self):
         section = ['main', ]
@@ -50,3 +30,58 @@ class Cron:
                 if not key_path:
                     el[k]['jobs'].append(Job(cron_str))
                 el = el[k]
+
+
+class Job:
+    CRONRE = re.compile(r'^\s*([^@#\s]+)\s+([^@#\s]+)\s+([^@#\s]+)\s+([^@#\s]+)'
+                        r'\s+([^@#\s]+)\s+([^\n]*?)(\s+#\s*([^\n]*)|$)')
+
+    def __init__(self, cron_str: str):
+        self.str = cron_str
+        self._minute = self._hour = self._day = self._month = self._weekday = self.what = None
+        self.read_cronjob(self.str)
+
+    @property
+    def when(self):
+        return f'{self._minute} {self._hour} {self._day} {self._month} {self._weekday}'
+
+    def read_cronjob(self, cron_str: str):
+        items = self.CRONRE.findall(cron_str)
+        for i, part in enumerate(('_minute', '_hour', '_day', '_month', '_weekday')):
+            setattr(self, part, Frequency(items[0][i], part))
+
+        self.what = ' ' .join(i for i in items[0][5:] if i)
+        return self
+
+    def __repr__(self):
+        return f'{self.when} {self.what}'
+
+
+class Frequency:
+    PARTS = {
+        '_minute': (0, 59),
+        '_hour': (0, 23),
+        '_day': (1, 31),
+        '_month': (1, 12),
+        '_weekday': (0, 6)
+    }
+
+    def __init__(self, when_str: str, typ):
+        self.str = when_str
+        self.occurencies = list(self.parse(when_str, typ))
+
+    @classmethod
+    def parse(self, when_str: str, typ: str):
+        min_r, max_r = self.PARTS[typ]
+        if ',' in when_str:
+            return map(int, when_str.split(','))
+        elif '-' in when_str:
+            min_r, max_r = map(int, when_str.split('-'))
+            return range(min_r, max_r + 1)
+        elif '/' in when_str:
+            return range(min_r, max_r + 1, int(when_str[-1]))
+        elif when_str == '*':
+            return range(min_r, max_r + 1)
+
+    def __repr__(self):
+        return self.str
