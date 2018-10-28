@@ -19,14 +19,18 @@ class Cron:
     def read_crontab(self):
         section = ['main', ]
         for cron_line in self._crontab.split('\n'):
+            print(cron_line)
             if cron_line.startswith('# CRONBAT'):
                 section = ''.join(cron_line.split()[2:-1]).split(':')
             else:
+                print('into it')
+                print(section, cron_line)
                 self._update_cron_section(section, cron_line)
 
     def _update_cron_section(self, key_path: list, cron_str: str):
         if cron_str:
             el = self.crons
+            key_path = copy(key_path)
             while key_path:
                 k = key_path.pop(0)
                 el.setdefault(k, {})
