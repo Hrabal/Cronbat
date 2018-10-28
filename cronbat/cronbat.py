@@ -1,6 +1,10 @@
+import os
 import re
-from copy import copy
+import editor
 import subprocess
+from copy import copy
+
+EDITOR = os.environ.get('EDITOR', 'vim')
 
 
 class Cron:
@@ -22,9 +26,9 @@ class Cron:
             if cron_line.startswith('# CRONBAT'):
                 section = ''.join(cron_line.split()[2:-1]).split(':')
             else:
-                self._update_cron_section(section, cron_line)
+                self._add_cron_instruction(section, cron_line)
 
-    def _update_cron_section(self, key_path: list, cron_str: str):
+    def _add_cron_instruction(self, key_path: list, cron_str: str):
         if cron_str:
             el = self.crons
             key_path = copy(key_path)
@@ -40,7 +44,7 @@ class Cron:
         source = copy(crondict or self.crons)
         parents = parents or []
         for name, section in source.items():
-            yield '# CRONBAT %s CRONBAT' % ':'.join(parents + [name, ]), section.pop('jobs')
+            yield '# CRONBAT %s CRONBAT' % ':'.join(parents + [name, ]), section
             if section:
                 parents.append(name)
                 yield from self._yield_crons(section, parents=parents)
@@ -49,9 +53,21 @@ class Cron:
     def dump_cron(self):
         cron_str = '\n\n'.join('%s\n%s' % (
             name,
-            '\n'.join(job.str for job in cron)
+            self._dump_section(cron)
         ) for name, cron in self._yield_crons())
         self._write_crontab(cron_str)
+
+    def _dump_section(self, section: list):
+        return '\n'.join(job.str for job in section.get('jobs', []))
+
+    def edit_section(self, path):
+        container = self.crons
+        for k in path:
+            container = container.get(k, {})
+        edit_result = editor.edit(contents=self._dump_section(container).encode('utf-8'))
+        container['jobs'] = []
+        for line in edit_result.decode('utf-8').split('\n'):
+            self._add_cron_instruction(path, line)
 
 
 class Job:
@@ -61,6 +77,7 @@ class Job:
     def __init__(self, cron_str: str):
         self.str = cron_str
         self._minute = self._hour = self._day = self._month = self._weekday = self.what = None
+        self._is_comment = False
         self.read_cronjob(self.str)
 
     @property
@@ -68,15 +85,17 @@ class Job:
         return f'{self._minute} {self._hour} {self._day} {self._month} {self._weekday}'
 
     def read_cronjob(self, cron_str: str):
-        items = self.CRONRE.findall(cron_str)
-        for i, part in enumerate(('_minute', '_hour', '_day', '_month', '_weekday')):
-            setattr(self, part, Frequency(items[0][i], part))
-
-        self.what = ' ' .join(i for i in items[0][5:] if i)
-        return self
+        if cron_str.startswith('#'):
+            self._is_comment = True
+        else:
+            items = self.CRONRE.findall(cron_str)
+            for i, part in enumerate(('_minute', '_hour', '_day', '_month', '_weekday')):
+                setattr(self, part, Frequency(items[0][i], part))
+            self.what = ' ' .join(i for i in items[0][5:] if i)
+            return self
 
     def __repr__(self):
-        return f'{self.when} {self.what}'
+        return f'{self.when} {self.what}' if not self._is_comment else self.str
 
 
 class Frequency:
