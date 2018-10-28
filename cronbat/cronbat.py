@@ -1,22 +1,26 @@
 import re
-from pprint import pprint
+from copy import copy
 import subprocess
 
 
 class Cron:
 
     def __init__(self):
-        self._crontab = subprocess.check_output(['crontab', '-l']).decode('utf-8')
+        self._crontab = self._get_crontab()
         self.crons = {}
         self.read_crontab()
-        pprint(self._crontab)
-        pprint(self.crons)
+
+    def _get_crontab(self):
+        return subprocess.check_output(['crontab', '-l']).decode('utf-8')
+
+    def _write_crontab(self, cron_str):
+        return subprocess.check_output(['echo', f'"{cron_str}"', '|', 'crontab', '-'])
 
     def read_crontab(self):
         section = ['main', ]
         for cron_line in self._crontab.split('\n'):
             if cron_line.startswith('# CRONBAT'):
-                section = ''.join(cron_line.split()[2:-2]).split(':')
+                section = ''.join(cron_line.split()[2:-1]).split(':')
             else:
                 self._update_cron_section(section, cron_line)
 
@@ -30,6 +34,23 @@ class Cron:
                 if not key_path:
                     el[k]['jobs'].append(Job(cron_str))
                 el = el[k]
+
+    def _yield_crons(self, crondict: dict=None, parents: list=None):
+        source = copy(crondict or self.crons)
+        parents = parents or []
+        for name, section in source.items():
+            yield '# CRONBAT %s CRONBAT' % ':'.join(parents + [name, ]), section.pop('jobs')
+            if section:
+                parents.append(name)
+                yield from self._yield_crons(section, parents=parents)
+            parents = []
+
+    def dump_cron(self):
+        cron_str = '\n\n'.join('%s\n%s' % (
+            name,
+            '\n'.join(job.str for job in cron)
+        ) for name, cron in self._yield_crons())
+        self._write_crontab(cron_str)
 
 
 class Job:
