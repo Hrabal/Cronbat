@@ -5,10 +5,13 @@ import editor
 import subprocess
 from copy import copy
 
+from sty import fg, rs
+
 EDITOR = os.environ.get('EDITOR', 'vim')
 
 
 class Cron:
+    CRONBAT_DELIMITER = '# CRONBAT'
 
     def __init__(self):
         self._crontab = self._get_crontab()
@@ -16,15 +19,19 @@ class Cron:
         self.read_crontab()
 
     def _get_crontab(self):
-        return subprocess.check_output(['crontab', '-l']).decode('utf-8')
+        try:
+            return subprocess.check_output(['crontab', '-l']).decode('utf-8')
+        except subprocess.CalledProcessError:
+            return ''
 
     def _write_crontab(self, cron_str):
-        return subprocess.check_output(['echo', f'"{cron_str}"', '|', 'crontab', '-'])
+        command = ['echo', f'"{cron_str}"', '|', 'crontab', '-']
+        return subprocess.check_output(command)
 
     def read_crontab(self):
         section = ['main', ]
         for cron_line in self._crontab.split('\n'):
-            if cron_line.startswith('# CRONBAT'):
+            if cron_line.startswith(self.CRONBAT_DELIMITER):
                 section = ''.join(cron_line.split()[2:-1]).split(':')
             else:
                 self._add_cron_instruction(section, cron_line)
@@ -46,19 +53,28 @@ class Cron:
         parents = parents or []
         for name, section in source.items():
             if name != '_jobs':
-                yield '# CRONBAT %s CRONBAT' % ':'.join(parents + [name, ]), section
+                yield f'{self.CRONBAT_DELIMITER} %s CRONBAT' % ':'.join(parents + [name, ]), section
                 if section:
                     parents.append(name)
                     yield from self._yield_crons(section, parents=parents)
                 parents = []
 
-    def dump_cron(self, to_cron: bool=True):
+    def _prettify_cron(self, cron_line: str, pretty: bool=False):
+        if not pretty:
+            return cron_line
+        if cron_line.startswith(self.CRONBAT_DELIMITER):
+            line = cron_line.split('CRONBAT')
+            name_parts = ' '.join(line[1:-1]).split(':')
+            return fg.green + f'{"####" * len(name_parts)}' + fg.yellow + ' => '.join(name_parts) + rs.fg
+        return cron_line
+
+    def dump_cron(self, to_cron: bool=True, pretty: bool=False):
         if not self.crons:
             cron_str = ''
         else:
             cron_str = '\n\n'.join('%s\n%s' % (
-                name,
-                self._dump_section(cron)
+                self._prettify_cron(name, pretty=pretty),
+                self._prettify_cron(self._dump_section(cron), pretty=pretty)
             ) for name, cron in self._yield_crons())
         if to_cron:
             self._write_crontab(cron_str)

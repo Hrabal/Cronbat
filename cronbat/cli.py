@@ -2,7 +2,7 @@
 """
 Collection of all the command line controllers we're gonna provide to the command line API
 """
-from .cronbat import Cron
+from cronbat import Cron
 
 
 class CommanlineController:
@@ -18,7 +18,7 @@ class MinusL(CommanlineController):
     command = 'l'
 
     def _base(self):
-        print(self.cron.dump_cron(to_cron=False))
+        print(self.cron.dump_cron(to_cron=False, pretty=True))
 
     def init(self):
         print('init!')

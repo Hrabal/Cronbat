@@ -3,14 +3,15 @@
 import argparse
 import inspect
 
-from . import cli as controllers
-from .colors import CRED, CEND
+from sty import fg, rs
+
+import cli
 
 parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers()
 
-# For every controller class defined in the commandline.controllers module we add a subparser
-for _, cls in inspect.getmembers(controllers, inspect.isclass):
+# For every controller class defined in the commandline.cli module we add a subparser
+for _, cls in inspect.getmembers(cli, inspect.isclass):
     # Only classes with _callable will be added as subparser (so to exclude utility classes)
     if getattr(cls, 'callable_cls', False):
         # Instantiate the controller class
@@ -33,8 +34,8 @@ if __name__ == '__main__':
     except AttributeError:
         import traceback
         print(traceback.format_exc())
-        print(f'{CRED}ERROR! Wrong command invocation, plese read the help:{CEND}')
-        print(f'{CRED}Base usage:{CEND}')
+        print(f'{fg.red}ERROR! Wrong command invocation, plese read the help:')
+        print(f'Base usage:{rs.fg}')
         parser.print_help()
         # retrieve subparsers from parser
         subparsers_actions = [
@@ -45,5 +46,5 @@ if __name__ == '__main__':
         for subparsers_action in subparsers_actions:
             # get all subparsers and print help
             for choice, subparser in subparsers_action.choices.items():
-                print(f"\nCommand {CRED}'{choice}'{CEND}")
+                print(f"\nCommand {fg.red}'{choice}'{rs.fg}")
                 print(subparser.format_help())
