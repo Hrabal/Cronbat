@@ -25,8 +25,13 @@ class Cron:
             return ''
 
     def _write_crontab(self, cron_str):
-        command = ['echo', f'"{cron_str}"', '|', 'crontab', '-']
-        return subprocess.check_output(command)
+        print('Writing to cron...', end=' ')
+        command = ['echo', f'"{cron_str}"', '|', 'crontab',  '-']
+        if not cron_str:
+            command = ['crontab', '-r']
+        r = subprocess.check_output(command)
+        print('done.')
+        return r
 
     def read_crontab(self):
         section = ['main', ]
