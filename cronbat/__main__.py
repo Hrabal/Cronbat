@@ -26,11 +26,15 @@ for _, cls in inspect.getmembers(cli, inspect.isclass):
                 method = method_parser.add_parser(fnc.__name__)
                 # Bind the class method to the subparser argument
                 method.set_defaults(func=fnc)
+                sig = inspect.signature(fnc)
+                for arg in inspect.signature(fnc).parameters.values():
+                    name = f'--{arg.name}' if arg.default is not arg.empty else arg.name
+                    method.add_argument(name)
 
 if __name__ == '__main__':
     args = parser.parse_args()
     try:
-        args.func()
+        args.func(**{k: v for k, v in vars(args).items() if k != 'func'})
     except AttributeError:
         import traceback
         print(traceback.format_exc())

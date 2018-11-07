@@ -26,7 +26,7 @@ class Cron:
 
     def _write_crontab(self, cron_str):
         print('Writing to cron...', end=' ')
-        command = ['echo', f'"{cron_str}"', '|', 'crontab',  '-']
+        command = ['echo', f'"{cron_str}"', '|', 'crontab', '-']
         if not cron_str:
             command = ['crontab', '-r']
         r = subprocess.check_output(command)
@@ -53,15 +53,16 @@ class Cron:
                     el[k]['_jobs'].append(Job(cron_str))
                 el = el[k]
 
-    def _yield_crons(self, crondict: dict=None, parents: list=None):
+    def _yield_crons(self, crondict: dict=None, parents: list=None, section_filter: str=None):
         source = copy(crondict or self.crons)
         parents = parents or []
         for name, section in source.items():
             if name != '_jobs':
-                yield f'{self.CRONBAT_DELIMITER} %s CRONBAT' % ':'.join(parents + [name, ]), section
+                if not section_filter or section_filter == name:
+                    yield f'{self.CRONBAT_DELIMITER} %s CRONBAT' % ':'.join(parents + [name, ]), section
                 if section:
                     parents.append(name)
-                    yield from self._yield_crons(section, parents=parents)
+                    yield from self._yield_crons(section, parents=parents, section_filter=section_filter)
                 parents = []
 
     def _prettify_cron(self, cron_line: str, pretty: bool=False):
@@ -73,14 +74,14 @@ class Cron:
             return fg.green + f'{"####" * len(name_parts)}' + fg.yellow + ' => '.join(name_parts) + rs.fg
         return cron_line
 
-    def dump_cron(self, to_cron: bool=True, pretty: bool=False):
+    def dump_cron(self, to_cron: bool=True, pretty: bool=False, section=None):
         if not self.crons:
             cron_str = ''
         else:
             cron_str = '\n\n'.join('%s\n%s' % (
                 self._prettify_cron(name, pretty=pretty),
                 self._prettify_cron(self._dump_section(cron), pretty=pretty)
-            ) for name, cron in self._yield_crons())
+            ) for name, cron in self._yield_crons(section_filter=section))
         if to_cron:
             self._write_crontab(cron_str)
         return cron_str

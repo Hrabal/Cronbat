@@ -20,8 +20,9 @@ class MinusL(CommanlineController):
     def _base(self):
         print(self.cron.dump_cron(to_cron=False, pretty=True))
 
-    def init(self):
-        print('init!')
+    def section(self, section_name: str):
+        section_name = section_name or 'main'
+        print(self.cron.dump_cron(to_cron=False, pretty=True, section=section_name))
 
 
 class MinusR(CommanlineController):
