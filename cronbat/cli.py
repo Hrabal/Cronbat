@@ -14,6 +14,7 @@ class CommanlineController:
 
 
 class MinusL(CommanlineController):
+    """With no extra params is equivalent to 'contab -l', lists the current crontab"""
     callable_cls = True
     command = 'l'
 
@@ -21,11 +22,13 @@ class MinusL(CommanlineController):
         print(self.cron.dump_cron(to_cron=False, pretty=True))
 
     def section(self, section_name: str):
+        """Filters the listing to the specified section."""
         section_name = section_name or 'main'
         print(self.cron.dump_cron(to_cron=False, pretty=True, section=section_name))
 
 
 class MinusR(CommanlineController):
+    """Equivalent to 'contab -r', erease the crontab."""
     callable_cls = True
     command = 'r'
 
