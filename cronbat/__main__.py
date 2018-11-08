@@ -28,9 +28,9 @@ for _, cls in inspect.getmembers(cli, inspect.isclass):
                 method.set_defaults(func=fnc)
                 for arg in inspect.signature(fnc).parameters.values():
                     name = f'--{arg.name}' if arg.default is not arg.empty else arg.name
-                    default = fnc_arg.default if arg.default is not arg.empty else None
+                    default = arg.default if arg.default is not arg.empty else None
                     method.add_argument(name,
-                                        type=fnc_arg.annotation or str,
+                                        type=arg.annotation or str,
                                         default=default
                                         )
 
