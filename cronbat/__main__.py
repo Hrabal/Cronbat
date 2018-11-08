@@ -26,18 +26,22 @@ for _, cls in inspect.getmembers(cli, inspect.isclass):
                 method = method_parser.add_parser(fnc.__name__)
                 # Bind the class method to the subparser argument
                 method.set_defaults(func=fnc)
-                sig = inspect.signature(fnc)
                 for arg in inspect.signature(fnc).parameters.values():
                     name = f'--{arg.name}' if arg.default is not arg.empty else arg.name
-                    method.add_argument(name)
+                    default = fnc_arg.default if arg.default is not arg.empty else None
+                    method.add_argument(name,
+                                        type=fnc_arg.annotation or str,
+                                        default=default
+                                        )
 
 if __name__ == '__main__':
     args = parser.parse_args()
     try:
+        if not vars(args):
+            raise AttributeError
         args.func(**{k: v for k, v in vars(args).items() if k != 'func'})
     except AttributeError:
         import traceback
-        print(traceback.format_exc())
         print(f'{fg.red}ERROR! Wrong command invocation, plese read the help:')
         print(f'Base usage:{rs.fg}')
         parser.print_help()

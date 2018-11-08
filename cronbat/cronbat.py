@@ -58,7 +58,7 @@ class Cron:
         parents = parents or []
         for name, section in source.items():
             if name != '_jobs':
-                if not section_filter or section_filter == name:
+                if not section_filter or section_filter == name or section_filter in parents:
                     yield f'{self.CRONBAT_DELIMITER} %s CRONBAT' % ':'.join(parents + [name, ]), section
                 if section:
                     parents.append(name)
@@ -74,7 +74,7 @@ class Cron:
             return fg.green + f'{"####" * len(name_parts)}' + fg.yellow + ' => '.join(name_parts) + rs.fg
         return cron_line
 
-    def dump_cron(self, to_cron: bool=True, pretty: bool=False, section=None):
+    def dump_cron(self, to_cron: bool=True, pretty: bool=False, section: str=None):
         if not self.crons:
             cron_str = ''
         else:
