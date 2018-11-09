@@ -34,3 +34,18 @@ class MinusR(CommanlineController):
 
     def _base(self):
         self.cron._r()
+
+
+class MinusE(CommanlineController):
+    """Equivalent to 'contab -e', edit crontab entries with configured editor."""
+    callable_cls = True
+    command = 'e'
+
+    def _base(self):
+        self.cron.edit_section(['main', ])
+        self.cron.dump_cron()
+
+    def section(self, section_name: str):
+        """Filters the listing to the specified section."""
+        section_name = section_name or 'main'
+        print(self.cron.edit_section(to_cron=False, pretty=True, section=section_name))

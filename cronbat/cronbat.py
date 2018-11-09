@@ -10,7 +10,45 @@ from sty import fg, rs
 EDITOR = os.environ.get('EDITOR', 'vim')
 
 
-class Cron:
+class CronDumper:
+    def _write_crontab(self, cron_str):
+        print('Writing to cron...', end=' ')
+        command = ['echo', f'"{cron_str}"', '|', 'crontab', '-']
+        if not cron_str:
+            command = ['crontab', '-r']
+        r = subprocess.check_output(command)
+        print('done.')
+        return r
+
+    def _prettify_cron(self, cron_line: str, pretty: bool=False):
+        if not pretty:
+            return cron_line
+        if cron_line.startswith(self.CRONBAT_DELIMITER):
+            line = cron_line.split('CRONBAT')
+            name_parts = ' '.join(line[1:-1]).split(':')
+            depth = len(name_parts)
+            name_parts = ' => '.join(name_parts)
+            return f'{fg.green}{"####" * depth}{fg.yellow}{name_parts}{rs.fg}'
+        return cron_line
+
+    def dump_cron(self, to_cron: bool=True,
+                  pretty: bool=False, section: str=None):
+        if not self.crons:
+            cron_str = ''
+        else:
+            cron_str = '\n\n'.join('%s\n%s' % (
+                self._prettify_cron(name, pretty=pretty),
+                self._prettify_cron(self._dump_section(cron), pretty=pretty)
+            ) for name, cron in self._yield_crons(s_filter=section))
+        if to_cron:
+            self._write_crontab(cron_str)
+        return cron_str
+
+    def _dump_section(self, section: list):
+        return '\n'.join(job.str for job in section.get('_jobs', []))
+
+
+class Cron(CronDumper):
     CRONBAT_DELIMITER = '# CRONBAT'
 
     def __init__(self):
@@ -23,15 +61,6 @@ class Cron:
             return subprocess.check_output(['crontab', '-l']).decode('utf-8')
         except subprocess.CalledProcessError:
             return ''
-
-    def _write_crontab(self, cron_str):
-        print('Writing to cron...', end=' ')
-        command = ['echo', f'"{cron_str}"', '|', 'crontab', '-']
-        if not cron_str:
-            command = ['crontab', '-r']
-        r = subprocess.check_output(command)
-        print('done.')
-        return r
 
     def read_crontab(self):
         section = ['main', ]
@@ -53,47 +82,30 @@ class Cron:
                     el[k]['_jobs'].append(Job(cron_str))
                 el = el[k]
 
-    def _yield_crons(self, crondict: dict=None, parents: list=None, section_filter: str=None):
+    def _yield_crons(self, crondict: dict=None, parents: list=None,
+                     s_filter: str=None):
         source = copy(crondict or self.crons)
         parents = parents or []
         for name, section in source.items():
             if name != '_jobs':
-                if not section_filter or section_filter == name or section_filter in parents:
-                    yield f'{self.CRONBAT_DELIMITER} %s CRONBAT' % ':'.join(parents + [name, ]), section
+                if not s_filter or s_filter == name or s_filter in parents:
+                    sect_name = ':'.join(parents + [name, ])
+                    cron_repr = f'{self.CRONBAT_DELIMITER} {sect_name} CRONBAT'
+                    yield cron_repr, section
                 if section:
                     parents.append(name)
-                    yield from self._yield_crons(section, parents=parents, section_filter=section_filter)
+                    yield from self._yield_crons(section, parents=parents,
+                                                 s_filter=s_filter)
                 parents = []
 
-    def _prettify_cron(self, cron_line: str, pretty: bool=False):
-        if not pretty:
-            return cron_line
-        if cron_line.startswith(self.CRONBAT_DELIMITER):
-            line = cron_line.split('CRONBAT')
-            name_parts = ' '.join(line[1:-1]).split(':')
-            return fg.green + f'{"####" * len(name_parts)}' + fg.yellow + ' => '.join(name_parts) + rs.fg
-        return cron_line
-
-    def dump_cron(self, to_cron: bool=True, pretty: bool=False, section: str=None):
-        if not self.crons:
-            cron_str = ''
-        else:
-            cron_str = '\n\n'.join('%s\n%s' % (
-                self._prettify_cron(name, pretty=pretty),
-                self._prettify_cron(self._dump_section(cron), pretty=pretty)
-            ) for name, cron in self._yield_crons(section_filter=section))
-        if to_cron:
-            self._write_crontab(cron_str)
-        return cron_str
-
-    def _dump_section(self, section: list):
-        return '\n'.join(job.str for job in section.get('_jobs', []))
-
-    def edit_section(self, path):
+    def edit_section(self, path: list=None):
+        path = path or []
         container = self.crons
         for k in path:
             container = container.get(k, {})
-        edit_result = editor.edit(contents=self._dump_section(container).encode('utf-8'))
+        section_str = '\n'.join(self._dump_section(c)
+                                for c in self._yield_crons(container)).encode('utf-8')
+        edit_result = editor.edit(contents=section_str)
         container['_jobs'] = []
         for line in edit_result.decode('utf-8').split('\n'):
             self._add_cron_instruction(path, line)

@@ -2,15 +2,23 @@
 """
 Command line factory
 """
+import sys
 import argparse
 import inspect
 
 from sty import fg, rs
 
 
+class ClassParser(argparse.ArgumentParser):
+    def error(self, message):
+        sys.stderr.write(f'{fg.red}error: {message}{rs.fg}\n')
+        self.print_help()
+        sys.exit(2)
+
+
 class CliBuilder:
     def __init__(self, controllers_module):
-        self.parser = argparse.ArgumentParser()
+        self.parser = ClassParser()
         subparsers = self.parser.add_subparsers()
 
         # For every controller class defined in the controllers_module module we add a subparser
@@ -41,12 +49,12 @@ class CliBuilder:
         args = self.parser.parse_args()
         try:
             if not vars(args):
-                raise AttributeError
+                raise argparse.ArgumentError(None, 'At least one argument needed.')
             args.func(**{k: v for k, v in vars(args).items() if k != 'func'})
-        except AttributeError:
+        except argparse.ArgumentError as ex:
             import traceback
-            print(f'{fg.red}ERROR! Wrong command invocation, plese read the help:')
-            print(f'Base usage:{rs.fg}')
+            print(f'{fg.red}ERROR! Wrong command invocation: {ex.message}{rs.fg}')
+            print('Please read the help:')
             self.parser.print_help()
             # retrieve subparsers from parser
             subparsers_actions = [
