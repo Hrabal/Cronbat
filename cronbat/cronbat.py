@@ -16,9 +16,14 @@ class CronDumper:
         command = ['echo', f'"{cron_str}"', '|', 'crontab', '-']
         if not cron_str:
             command = ['crontab', '-r']
-        r = subprocess.check_output(command)
+        try:
+            subprocess.check_output(command, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            if 'crontab: no crontab' in e.output.decode():
+                pass
+            else:
+                raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
         print('done.')
-        return r
 
     def _prettify_cron(self, cron_line: str, pretty: bool=False):
         if not pretty:
@@ -58,7 +63,7 @@ class Cron(CronDumper):
 
     def _get_crontab(self):
         try:
-            return subprocess.check_output(['crontab', '-l']).decode('utf-8')
+            return subprocess.check_output(['crontab', '-l'], stderr=subprocess.STDOUT).decode('utf-8')
         except subprocess.CalledProcessError:
             return ''
 
