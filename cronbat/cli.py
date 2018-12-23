@@ -50,5 +50,6 @@ class MinusE(CommanlineController):
 
     def section(self, section_name: str):
         """Filters the listing to the specified section."""
-        section_name = section_name or 'main'
-        print(self.cron.edit_section(to_cron=False, pretty=True, section=section_name))
+        section_name = section_name or "main"
+        self.cron.edit_section([section_name])
+        self.cron.dump_cron()

@@ -3,27 +3,37 @@ import os
 import re
 import editor
 import subprocess
+from pathlib import Path
 from copy import copy
 
 from sty import fg, rs
 
-EDITOR = os.environ.get('EDITOR', 'vim')
+EDITOR = os.environ.get("EDITOR", "vim")
 
 
 class CronDumper:
+    _temp_cronbat = Path(".tempcronbat")
+
     def _write_crontab(self, cron_str):
-        print('Writing to cron...', end=' ')
-        command = ['echo', f'"{cron_str}"', '|', 'crontab', '-']
+        print("Writing to cron...", end=" ")
         if not cron_str:
-            command = ['crontab', '-r']
+            command = ["crontab", "-r"]
+        else:
+            self._temp_cronbat.write_text(cron_str)
+            command = ["crontab", self._temp_cronbat]
         try:
             subprocess.check_output(command, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
-            if 'crontab: no crontab' in e.output.decode():
+            if "crontab: no crontab" in e.output.decode():
                 pass
             else:
-                raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
-        print('done.')
+                raise RuntimeError(
+                    f"command '{e.cmd}' return with error (code {e.returncode}): {e.output}"
+                )
+        else:
+            if self._temp_cronbat.exists():
+                self._temp_cronbat.unlink()
+        print("done.")
 
     def _prettify_cron(self, cron_line: str, pretty: bool = False):
         if not pretty:
