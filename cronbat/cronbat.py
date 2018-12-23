@@ -19,7 +19,7 @@ class CronDumper:
         if not cron_str:
             command = ["crontab", "-r"]
         else:
-            self._temp_cronbat.write_text(cron_str)
+            self._temp_cronbat.write_text(cron_str + "\n")
             command = ["crontab", self._temp_cronbat]
         try:
             subprocess.check_output(command, stderr=subprocess.STDOUT)
@@ -38,7 +38,7 @@ class CronDumper:
     def _prettify_cron(self, cron_line: str, pretty: bool = False):
         if not pretty:
             return cron_line
-        if cron_line.startswith(self.CRONBAT_DELIMITER):
+        if cron_line.startswith(self.CRONBAT_LS):
             line = cron_line.split("CRONBAT")
             name_parts = " ".join(line[1:-1]).split(":")
             depth = len(name_parts)
@@ -69,7 +69,9 @@ class CronDumper:
 
 
 class Cron(CronDumper):
-    CRONBAT_DELIMITER = "# CRONBAT"
+    CRONBAT = "CRONBAT"
+    CRONBAT_LS = f"# {CRONBAT}"
+    CRONBAT_LE = f"{CRONBAT} #"
 
     def __init__(self):
         self._crontab = self._get_crontab()
@@ -87,7 +89,7 @@ class Cron(CronDumper):
     def read_crontab(self):
         section = ["main"]
         for cron_line in self._crontab.split("\n"):
-            if cron_line.startswith(self.CRONBAT_DELIMITER):
+            if cron_line.startswith(self.CRONBAT_LS):
                 section = "".join(cron_line.split()[2:-1]).split(":")
             else:
                 self._add_cron_instruction(section, cron_line)
@@ -113,7 +115,7 @@ class Cron(CronDumper):
             if name != "_jobs":
                 if not s_filter or s_filter == name or s_filter in parents:
                     sect_name = ":".join(parents + [name])
-                    cron_repr = f"{self.CRONBAT_DELIMITER} {sect_name} CRONBAT"
+                    cron_repr = f"{self.CRONBAT_LS} {sect_name} {self.CRONBAT_LE}"
                     yield cron_repr, section
                 if section:
                     parents.append(name)
@@ -128,16 +130,12 @@ class Cron(CronDumper):
         for k in path:
             container = container.get(k, {})
         section_str = "\n".join(
-            self._dump_section(c) for c in self._yield_crons(container)
+            self._dump_section(c) for name, c in self._yield_crons(container)
         ).encode("utf-8")
         edit_result = editor.edit(contents=section_str)
         container["_jobs"] = []
         for line in edit_result.decode("utf-8").split("\n"):
-            print(f"CRONLINE: {line}")
             self._add_cron_instruction(path, line)
-        from pprint import pprint
-
-        pprint(self.crons)
 
     def _r(self):
         self.crons = {}
