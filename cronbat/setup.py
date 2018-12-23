@@ -24,16 +24,17 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 
-setup(name='classcli',
-      version=__version__,
-      author='Federico Cerchiari',
-      author_email='federicocerchiari@gmail.com',
-      description='Command Line Interfaces from custom classes',
-      license='APACHE 2.0',
-      packages=['classcli', ],
-      url='https://github.com/Hrabal/ClassCLI',
-      keywords=['python3', 'cli', 'argparse', 'userio', 'io', ],
-      download_url='https://github.com/Hrabal/ClassCLI/archive/%s.tar.gz' % __version__,
-      python_requires='>=3.3',
-      long_description=long_description,
-      )
+setup(
+    name="classcli",
+    version=__version__,
+    author="Federico Cerchiari",
+    author_email="federicocerchiari@gmail.com",
+    description="Command Line Interfaces from custom classes",
+    license="APACHE 2.0",
+    packages=["classcli"],
+    url="https://github.com/Hrabal/ClassCLI",
+    keywords=["python3", "cli", "argparse", "userio", "io"],
+    download_url="https://github.com/Hrabal/ClassCLI/archive/%s.tar.gz" % __version__,
+    python_requires=">=3.3",
+    long_description=long_description,
+)

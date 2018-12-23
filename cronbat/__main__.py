@@ -3,5 +3,5 @@
 from classcli import CliBuilder
 import cli
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     CliBuilder(cli).run_cli()

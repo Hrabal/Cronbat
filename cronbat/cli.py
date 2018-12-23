@@ -15,22 +15,24 @@ class CommanlineController:
 
 class MinusL(CommanlineController):
     """With no extra params is equivalent to 'contab -l', lists the current crontab"""
+
     callable_cls = True
-    command = 'l'
+    command = "l"
 
     def _base(self):
         print(self.cron.dump_cron(to_cron=False, pretty=True))
 
     def section(self, section_name: str):
         """Filters the listing to the specified section."""
-        section_name = section_name or 'main'
+        section_name = section_name or "main"
         print(self.cron.dump_cron(to_cron=False, pretty=True, section=section_name))
 
 
 class MinusR(CommanlineController):
     """Equivalent to 'contab -r', erease the crontab."""
+
     callable_cls = True
-    command = 'r'
+    command = "r"
 
     def _base(self):
         self.cron._r()
@@ -38,11 +40,12 @@ class MinusR(CommanlineController):
 
 class MinusE(CommanlineController):
     """Equivalent to 'contab -e', edit crontab entries with configured editor."""
+
     callable_cls = True
-    command = 'e'
+    command = "e"
 
     def _base(self):
-        self.cron.edit_section(['main', ])
+        self.cron.edit_section(["main"])
         self.cron.dump_cron()
 
     def section(self, section_name: str):
