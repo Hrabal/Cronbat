@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
 
-#   Copyright 2017 Federico Cerchiari <federicocerchiari@gmail.com>
+#   Copyright 2018 Federico Cerchiari <federicocerchiari@gmail.com>
 #
-#   this file is part of ClassCLI
+#   this file is part of CronBat
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -18,23 +18,24 @@
 
 from setuptools import setup
 
-from classcli import __version__
+from cronbat import __version__
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 
 setup(
-    name="classcli",
+    name="cronbat",
     version=__version__,
     author="Federico Cerchiari",
     author_email="federicocerchiari@gmail.com",
-    description="Command Line Interfaces from custom classes",
+    description="Cron manager and analyzer.",
     license="APACHE 2.0",
-    packages=["classcli"],
-    url="https://github.com/Hrabal/ClassCLI",
-    keywords=["python3", "cli", "argparse", "userio", "io"],
-    download_url="https://github.com/Hrabal/ClassCLI/archive/%s.tar.gz" % __version__,
+    packages=["cronbat"],
+    url="https://github.com/Hrabal/Cronbat",
+    keywords=["python3", "cron", "crontab", "utility", "sysadmin", "unix"],
+    download_url="https://github.com/Hrabal/Cronbat/archive/%s.tar.gz" % __version__,
     python_requires=">=3.3",
+    install_requires=["classcli"],
     long_description=long_description,
 )
